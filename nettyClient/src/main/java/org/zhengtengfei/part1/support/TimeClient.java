@@ -27,6 +27,8 @@ public class TimeClient {
                         }
                     });
             ChannelFuture f = b.connect(host,port).sync();
+
+            f.channel().closeFuture().sync();
         } catch (InterruptedException e) {
             e.printStackTrace();
         }finally {
@@ -35,7 +37,7 @@ public class TimeClient {
     }
 
     public static void main(String[] args) {
-        int port = 9998;
+        int port = 9999;
         new TimeClient().connect(port,"127.0.0.1");
     }
 }
