@@ -1,4 +1,4 @@
-package org.zhengtengfei.part1.support;
+package org.zhengtengfei.part2.support;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -13,12 +13,13 @@ import java.io.UnsupportedEncodingException;
  */
 @Slf4j
 public class TimeClientHandler extends ChannelHandlerAdapter {
-    private final ByteBuf firstMessage;
+
+    private int counter;
+
+    private byte[] req;
 
     public TimeClientHandler() {
-        byte[] req = "QUERY TIME ORDER".getBytes();
-        firstMessage = Unpooled.buffer(req.length);
-        firstMessage.writeBytes(req);
+        req = ("QUERY TIME ORDER" + System.getProperty("line.separator")).getBytes();
     }
 
     /**
@@ -28,7 +29,12 @@ public class TimeClientHandler extends ChannelHandlerAdapter {
     @Override
     public void channelActive(ChannelHandlerContext ctx){
         // 将请求消息发送到服务端
-        ctx.writeAndFlush(firstMessage);
+        ByteBuf message = null;
+        for (int i = 0; i < 100; i++){
+            message = Unpooled.buffer(req.length);
+            message.writeBytes(req);
+            ctx.writeAndFlush(message);
+        }
     }
 
     /**
@@ -39,11 +45,8 @@ public class TimeClientHandler extends ChannelHandlerAdapter {
      */
     @Override
     public void channelRead(ChannelHandlerContext ctx,Object msg) throws UnsupportedEncodingException {
-        ByteBuf buf = (ByteBuf) msg;
-        byte[] req = new byte[buf.readableBytes()];
-        buf.readBytes(req);
-        String body = new String(req,"UTF-8");
-        System.out.println("Now is : "+body);
+        String body = (String) msg;
+        System.out.println("Now is : "+body + " ; the counter is : " + ++ counter);
     }
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx,Throwable cause){
