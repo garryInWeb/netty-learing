@@ -11,6 +11,7 @@ import org.server.part5.dto.UserInfo;
 public class EchoClientHandler extends ChannelHandlerAdapter {
 
     private final int sendNumber;
+    private int count;
 
     public EchoClientHandler(int sendNumber) {
         this.sendNumber = sendNumber;
@@ -43,8 +44,9 @@ public class EchoClientHandler extends ChannelHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        System.out.println("Client receive " + msg);
-        ctx.write(msg);
+        System.out.println("Client receive " + msg + ";count " + ++count);
+        if (count < 5)
+            ctx.write(msg);
     }
 
     @Override

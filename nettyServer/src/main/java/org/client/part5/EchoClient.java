@@ -8,6 +8,8 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import io.netty.handler.codec.LengthFieldPrepender;
 import org.server.part5.codec.MsgPackEncoder;
 import org.server.part5.codec.MsgpackDecoder;
 
@@ -26,7 +28,13 @@ public class EchoClient {
                     .option(ChannelOption.CONNECT_TIMEOUT_MILLIS,3000)
                     .handler(new ChannelInitializer<SocketChannel>() {
                         protected void initChannel(SocketChannel socketChannel) throws Exception {
-                            socketChannel.pipeline().addLast("msgpack decoder",new MsgpackDecoder())
+                            socketChannel.pipeline()
+                                    // 在ByteBuf 之前增加2个字节的消息长度
+                                    .addLast("frameEncoder",new LengthFieldPrepender(2))
+                                    //
+                                    .addLast("frameDecoder",new LengthFieldBasedFrameDecoder(65535,0,2,0,2))
+
+                                    .addLast("msgpack decoder",new MsgpackDecoder())
                                     .addLast("msgpack encoder",new MsgPackEncoder())
                                     .addLast(new EchoClientHandler(sendNumber));
                         }
