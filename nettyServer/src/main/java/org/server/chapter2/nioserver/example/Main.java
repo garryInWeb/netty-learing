@@ -1,9 +1,8 @@
 package org.server.chapter2.nioserver.example;
 
-import nioserver.IMessageProcessor;
-import nioserver.Message;
-import nioserver.Server;
-import nioserver.http.HttpMessageReaderFactory;
+
+import org.server.chapter2.nioserver.*;
+import org.server.chapter2.nioserver.http.HttpMessageReaderFactory;
 
 import java.io.IOException;
 

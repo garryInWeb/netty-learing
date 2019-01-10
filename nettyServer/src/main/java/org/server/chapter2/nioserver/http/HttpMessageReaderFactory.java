@@ -1,8 +1,8 @@
 package org.server.chapter2.nioserver.http;
 
 
-import nioserver.IMessageReader;
-import nioserver.IMessageReaderFactory;
+import org.server.chapter2.nioserver.IMessageReader;
+import org.server.chapter2.nioserver.IMessageReaderFactory;
 
 /**
  * Created by jjenkov on 18-10-2015.

@@ -1,6 +1,7 @@
 package org.server.chapter2.nioserver.http;
 
-import nioserver.*;
+
+import org.server.chapter2.nioserver.*;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
