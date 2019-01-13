@@ -1,8 +1,11 @@
 package org.server.chapter10.server;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.handler.codec.http.*;
 import io.netty.handler.stream.ChunkedFile;
+import io.netty.util.CharsetUtil;
 
 import java.io.File;
 import java.io.RandomAccessFile;
@@ -11,6 +14,8 @@ import java.net.URLDecoder;
 import java.util.regex.Pattern;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
+import static io.netty.handler.codec.http.HttpHeaderNames.LOCATION;
 import static io.netty.handler.codec.http.HttpHeaderUtil.isKeepAlive;
 import static io.netty.handler.codec.http.HttpHeaderUtil.setContentLength;
 import static io.netty.handler.codec.http.HttpHeaderValues.KEEP_ALIVE;
@@ -88,12 +93,44 @@ public class HttpFileServerHandler extends SimpleChannelInboundHandler<FullHttpR
         });
     }
 
-    private void sendRedirect(ChannelHandlerContext ctx, String s) {
-
+    private void sendRedirect(ChannelHandlerContext ctx, String newUrl) {
+        FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,FOUND);
+        response.headers().set(LOCATION,newUrl);
+        ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
     }
 
-    private void sendListing(ChannelHandlerContext ctx, File file) {
-
+    private void sendListing(ChannelHandlerContext ctx, File dir) {
+        FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,OK);
+        response.headers().set(CONTENT_TYPE,"text/html;charset=UTF-8");
+        StringBuilder buf = new StringBuilder();
+        String dirPath = dir.getPath();
+        buf.append("<!DOCTYPE html>\r\n");
+        buf.append("<html><head><title>");
+        buf.append(dirPath);
+        buf.append(" 目录： ");
+        buf.append("</title></head><body>\r\n");
+        buf.append("<h3>\r\n");
+        buf.append("<ul>");
+        buf.append("<li>连接：<a href=\"../\">..</a></li>\r\n");
+        for (File file : dir.listFiles()){
+            if (file.isHidden() || !file.canRead()){
+                continue;
+            }
+            String name = file.getName();
+            if (!ALLOWED_FILE_NAME.matcher(name).matches()){
+                continue;
+            }
+            buf.append("<li>连接：<a href=\"");
+            buf.append(name);
+            buf.append("\">");
+            buf.append(name);
+            buf.append("</a></li>\r\n");
+        }
+        buf.append("</ul></body></html>\r\n");
+        ByteBuf buffer = Unpooled.copiedBuffer(buf, CharsetUtil.UTF_8);
+        response.content().writeBytes(buffer);
+        buffer.release();
+        ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
     }
 
     private void setContentTypeHeader(HttpResponse response, File file) {
