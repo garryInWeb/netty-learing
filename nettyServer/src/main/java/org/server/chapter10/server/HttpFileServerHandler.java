@@ -21,33 +21,45 @@ import static io.netty.handler.codec.http.HttpResponseStatus.*;
  */
 public class HttpFileServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
 
+
+    private static final Pattern INSECURE_URI = Pattern.compile(".*[<>&\"].*");
+    private static final Pattern ALLOWED_FILE_NAME = Pattern.compile("[A-Za-z0-9][-_A-Za-z0-9\\.]*");
+
     public HttpFileServerHandler(String url) {
 
     }
 
     @Override
-    protected void messageReceived(ChannelHandlerContext channelHandlerContext, FullHttpRequest request) throws Exception {
+    protected void messageReceived(ChannelHandlerContext ctx, FullHttpRequest request) throws Exception {
+        // 请求消息解码结果判断
         if (!request.decoderResult().isSuccess()){
-            sendError(channelHandlerContext,BAD_REQUEST);
+            sendError(ctx,BAD_REQUEST);
             return ;
         }
         if (request.method() != HttpMethod.GET){
-            sendError(channelHandlerContext,METHOD_NOT_ALLOWED);
+            sendError(ctx,METHOD_NOT_ALLOWED);
             return ;
         }
         final String uri = request.uri();
-        final  String path = sanitizeUri(uri);
+        final String path = sanitizeUri(uri);
         if (path == null){
-            sendError(channelHandlerContext,FORBIDDEN);
+            sendError(ctx,FORBIDDEN);
             return;
         }
         File file = new File(path);
         if (file.isHidden() || !file.exists()){
-            sendError(channelHandlerContext,NOT_FOUND);
+            sendError(ctx,NOT_FOUND);
             return;
         }
+        if (file.isDirectory()){
+            if (uri.endsWith("/")){
+                sendListing(ctx,file);
+            }else{
+                sendRedirect(ctx,uri + "/");
+            }
+        }
         if (!file.isFile()){
-            sendError(channelHandlerContext,FORBIDDEN);
+            sendError(ctx,FORBIDDEN);
             return;
         }
         RandomAccessFile randomAccessFile = null;
@@ -60,9 +72,9 @@ public class HttpFileServerHandler extends SimpleChannelInboundHandler<FullHttpR
         if (isKeepAlive(request)){
             response.headers().set(CONNECTION,KEEP_ALIVE);
         }
-        channelHandlerContext.write(response);
+        ctx.write(response);
         ChannelFuture sendFileFuture;
-        sendFileFuture = channelHandlerContext.write(new ChunkedFile(randomAccessFile,0,fileLength,8192),channelHandlerContext.newProgressivePromise());
+        sendFileFuture = ctx.write(new ChunkedFile(randomAccessFile,0,fileLength,8192),ctx.newProgressivePromise());
         sendFileFuture.addListener(new ChannelProgressiveFutureListener() {
             @Override
             public void operationProgressed(ChannelProgressiveFuture channelProgressiveFuture, long l, long l1) throws Exception {
@@ -76,10 +88,17 @@ public class HttpFileServerHandler extends SimpleChannelInboundHandler<FullHttpR
         });
     }
 
+    private void sendRedirect(ChannelHandlerContext ctx, String s) {
+
+    }
+
+    private void sendListing(ChannelHandlerContext ctx, File file) {
+
+    }
+
     private void setContentTypeHeader(HttpResponse response, File file) {
 
     }
-    private static final Pattern INSECURE_URI = Pattern.compile(".*[<>&\"].*");
 
     private String sanitizeUri(String uri) {
         try{
@@ -87,6 +106,7 @@ public class HttpFileServerHandler extends SimpleChannelInboundHandler<FullHttpR
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
         }
+        // 替换为系统分隔符
         uri = uri.replace('/',File.separatorChar);
         if (uri.contains(File.separator + '.')
                 || uri.contains("." + File.separatorChar)
@@ -95,9 +115,13 @@ public class HttpFileServerHandler extends SimpleChannelInboundHandler<FullHttpR
                 || INSECURE_URI.matcher(uri).matches()){
             return null;
         }
+        //
+        return System.getProperty("user.dir") + File.separator + uri;
     }
 
     private void sendError(ChannelHandlerContext channelHandlerContext, HttpResponseStatus methodNotAllowed) {
 
     }
+
+
 }
