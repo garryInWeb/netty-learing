@@ -7,6 +7,7 @@ import io.netty.handler.codec.http.*;
 import io.netty.handler.stream.ChunkedFile;
 import io.netty.util.CharsetUtil;
 
+import javax.activation.MimetypesFileTypeMap;
 import java.io.File;
 import java.io.RandomAccessFile;
 import java.io.UnsupportedEncodingException;
@@ -29,9 +30,10 @@ public class HttpFileServerHandler extends SimpleChannelInboundHandler<FullHttpR
 
     private static final Pattern INSECURE_URI = Pattern.compile(".*[<>&\"].*");
     private static final Pattern ALLOWED_FILE_NAME = Pattern.compile("[A-Za-z0-9][-_A-Za-z0-9\\.]*");
+    private String uri;
 
     public HttpFileServerHandler(String url) {
-
+        this.uri = url;
     }
 
     @Override
@@ -62,16 +64,21 @@ public class HttpFileServerHandler extends SimpleChannelInboundHandler<FullHttpR
             }else{
                 sendRedirect(ctx,uri + "/");
             }
+            return;
         }
         if (!file.isFile()){
             sendError(ctx,FORBIDDEN);
             return;
         }
+        // nio 提供的读文件方法
         RandomAccessFile randomAccessFile = null;
         randomAccessFile = new RandomAccessFile(file,"r");
         long fileLength = randomAccessFile.length();
+        // 响应
         HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1,OK);
+        // netty提供的方法设置响应体长度
         setContentLength(response,fileLength);
+        // 设置相应的媒体类型
         setContentTypeHeader(response,file);
 
         if (isKeepAlive(request)){
@@ -79,18 +86,27 @@ public class HttpFileServerHandler extends SimpleChannelInboundHandler<FullHttpR
         }
         ctx.write(response);
         ChannelFuture sendFileFuture;
+        // ChunkedFile 直接将文件写入到发送缓冲区中
         sendFileFuture = ctx.write(new ChunkedFile(randomAccessFile,0,fileLength,8192),ctx.newProgressivePromise());
         sendFileFuture.addListener(new ChannelProgressiveFutureListener() {
             @Override
-            public void operationProgressed(ChannelProgressiveFuture channelProgressiveFuture, long l, long l1) throws Exception {
-
+            public void operationProgressed(ChannelProgressiveFuture future, long progress, long total) throws Exception {
+                if (total < 0){
+                    System.err.println("Transfer progress : " + progress);
+                }else{
+                    System.err.println("Transfer progress: " + progress + "/" + total);
+                }
             }
 
             @Override
             public void operationComplete(ChannelProgressiveFuture channelProgressiveFuture) throws Exception {
-
+                System.out.println("Transfer complete");
             }
         });
+        ChannelFuture lastContentFuture = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
+        if (!isKeepAlive(request)){
+            lastContentFuture.addListener(ChannelFutureListener.CLOSE);
+        }
     }
 
     private void sendRedirect(ChannelHandlerContext ctx, String newUrl) {
@@ -132,9 +148,10 @@ public class HttpFileServerHandler extends SimpleChannelInboundHandler<FullHttpR
         buffer.release();
         ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
     }
-
+    // 设置文件的mime type
     private void setContentTypeHeader(HttpResponse response, File file) {
-
+        MimetypesFileTypeMap mimetypesFileTypeMap = new MimetypesFileTypeMap();
+        response.headers().set(CONTENT_TYPE,mimetypesFileTypeMap.getContentType(file.getPath()));
     }
 
     private String sanitizeUri(String uri) {
@@ -142,6 +159,12 @@ public class HttpFileServerHandler extends SimpleChannelInboundHandler<FullHttpR
             uri = URLDecoder.decode(uri,"UTF-8");
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
+        }
+        if (!uri.startsWith(this.uri)){
+            return null;
+        }
+        if (!uri.startsWith("/")){
+            return null;
         }
         // 替换为系统分隔符
         uri = uri.replace('/',File.separatorChar);
@@ -156,8 +179,11 @@ public class HttpFileServerHandler extends SimpleChannelInboundHandler<FullHttpR
         return System.getProperty("user.dir") + File.separator + uri;
     }
 
-    private void sendError(ChannelHandlerContext channelHandlerContext, HttpResponseStatus methodNotAllowed) {
-
+    private void sendError(ChannelHandlerContext channelHandlerContext, HttpResponseStatus status) {
+        FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,status,Unpooled.copiedBuffer("Failure: "+ status.toString()
+        + "\r\n",CharsetUtil.UTF_8));
+        response.headers().set(CONTENT_TYPE,"text/plain;charset=UTF-8");
+        channelHandlerContext.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
     }
 
 

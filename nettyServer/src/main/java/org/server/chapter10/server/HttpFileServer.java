@@ -37,7 +37,7 @@ public class HttpFileServer {
                                     .addLast("http-encoder",new HttpResponseEncoder())
                                     // 支持异步发送大的码流，不占用过多的内存，防止JAVA内存溢出错误
                                     .addLast("http-chunked",new ChunkedWriteHandler())
-                                    .addLast("http-chunked",new HttpFileServerHandler(url));
+                                    .addLast("fileServerChunked",new HttpFileServerHandler(url));
                         }
                     });
             ChannelFuture channelFuture = b.bind(port).sync();
@@ -49,6 +49,6 @@ public class HttpFileServer {
     }
 
     public static void main(String[] args) throws InterruptedException {
-        new HttpFileServer().run(9998,"/url/netty/");
+        new HttpFileServer().run(9998,"/nettyServer/src/main/java/org/server/");
     }
 }
