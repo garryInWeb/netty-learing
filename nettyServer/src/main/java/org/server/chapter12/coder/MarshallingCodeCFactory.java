@@ -10,13 +10,13 @@ import java.io.IOException;
  * Created by zhengtengfei on 2019/1/24.
  */
 public class MarshallingCodeCFactory {
-    public static MarshallingDecoder buildMarshallingDecoder(){
+    public static MarshallingDecoder buildMarshallingDecoder() throws IOException {
         // Java序列化工厂对象
         final MarshallerFactory marshallerFactory = Marshalling.getProvidedMarshallerFactory("serial");
         final MarshallingConfiguration configuration = new MarshallingConfiguration();
         configuration.setVersion(5);
         UnmarshallerProvider provider = new DefaultUnmarshallerProvider(marshallerFactory,configuration);
-        MarshallingDecoder decoder = new MarshallingDecoder(provider,1024);
+        MarshallingDecoder decoder = new MarshallingDecoder();
         return decoder;
     }
     public static MarshallingEncoder buildMarshallingEncoder(){

@@ -14,12 +14,9 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.util.regex.Pattern;
 
-import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
-import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
-import static io.netty.handler.codec.http.HttpHeaderNames.LOCATION;
-import static io.netty.handler.codec.http.HttpHeaderUtil.isKeepAlive;
-import static io.netty.handler.codec.http.HttpHeaderUtil.setContentLength;
-import static io.netty.handler.codec.http.HttpHeaderValues.KEEP_ALIVE;
+import static io.netty.handler.codec.http.HttpHeaders.*;
+import static io.netty.handler.codec.http.HttpHeaders.Names.*;
+import static io.netty.handler.codec.http.HttpHeaders.Values.KEEP_ALIVE;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 
 /**
@@ -39,15 +36,15 @@ public class HttpFileServerHandler extends SimpleChannelInboundHandler<FullHttpR
     @Override
     protected void messageReceived(ChannelHandlerContext ctx, FullHttpRequest request) throws Exception {
         // 请求消息解码结果判断
-        if (!request.decoderResult().isSuccess()){
+        if (!request.getDecoderResult().isSuccess()){
             sendError(ctx,BAD_REQUEST);
             return ;
         }
-        if (request.method() != HttpMethod.GET){
+        if (request.getMethod() != HttpMethod.GET){
             sendError(ctx,METHOD_NOT_ALLOWED);
             return ;
         }
-        final String uri = request.uri();
+        final String uri = request.getUri();
         final String path = sanitizeUri(uri);
         if (path == null){
             sendError(ctx,FORBIDDEN);

@@ -29,4 +29,9 @@ public class HeartBeatRespHandler extends ChannelHandlerAdapter {
         message.setHeader(header);
         return message;
     }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        ctx.fireExceptionCaught(cause);
+    }
 }

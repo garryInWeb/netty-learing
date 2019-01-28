@@ -23,7 +23,8 @@ public class MarshallingDecoder {
         ByteInput input = new ChannelBufferByteInput(buf);
         unmarshaller.start(input);
         Object obj = unmarshaller.readObject();
-        in.readerIndex();
+        unmarshaller.finish();
+        in.readerIndex(in.readerIndex() + objectSize);
         return obj;
 
     }
